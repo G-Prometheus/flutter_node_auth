@@ -3,13 +3,15 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_node_auth/models/user.dart';
 import 'package:flutter_node_auth/providers/user_provider.dart';
-import 'package:flutter_node_auth/screens/home_screen.dart';
-import 'package:flutter_node_auth/screens/signup_screen.dart';
+import 'package:flutter_node_auth/screens/auth/signup_screen.dart';
+import 'package:flutter_node_auth/screens/intro/page/intro.dart';
 import 'package:flutter_node_auth/utils/constants.dart';
 import 'package:flutter_node_auth/utils/utils.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../screens/main/main.dart';
 
 class AuthService {
   void signUpUser({
@@ -21,6 +23,7 @@ class AuthService {
     try {
       User user = User(
         id: '',
+        type: '',
         name: name,
         password: password,
         email: email,
@@ -38,15 +41,28 @@ class AuthService {
       httpErrorHandle(
         response: res,
         context: context,
-        onSuccess: () {
+        onSuccess: () async {
+          // Đảm bảo rằng thông tin người dùng được cập nhật trong UserProvider
+          var userProvider = Provider.of<UserProvider>(context, listen: false);
+          userProvider
+              .setUser(res.body); // Cập nhật thông tin người dùng từ phản hồi
+
           showSnackBar(
             context,
             'Account created! Login with the same credentials!',
           );
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const NavigationScreen(),
+            ),
+            (route) =>
+                false, // This ensures that all previous routes are removed
+          );
         },
       );
     } catch (e) {
-      showSnackBar(context, e.toString());
+      print('Lỗi: $e');
     }
   }
 
@@ -77,14 +93,14 @@ class AuthService {
           await prefs.setString('x-auth-token', jsonDecode(res.body)['token']);
           navigator.pushAndRemoveUntil(
             MaterialPageRoute(
-              builder: (context) => const HomeScreen(),
+              builder: (context) => const NavigationScreen(),
             ),
             (route) => false,
           );
         },
       );
     } catch (e) {
-      showSnackBar(context, e.toString());
+      print('Lỗi: $e');
     }
   }
 
@@ -114,13 +130,16 @@ class AuthService {
       if (response == true) {
         http.Response userRes = await http.get(
           Uri.parse('${Constants.uri}/'),
-          headers: <String, String>{'Content-Type': 'application/json; charset=UTF-8', 'x-auth-token': token},
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+            'x-auth-token': token
+          },
         );
 
         userProvider.setUser(userRes.body);
       }
     } catch (e) {
-      showSnackBar(context, e.toString());
+      print('Lỗi: $e');
     }
   }
 
@@ -130,7 +149,7 @@ class AuthService {
     prefs.setString('x-auth-token', '');
     navigator.pushAndRemoveUntil(
       MaterialPageRoute(
-        builder: (context) => const SignupScreen(),
+        builder: (context) => const IntroPage(),
       ),
       (route) => false,
     );

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_node_auth/providers/user_provider.dart';
-import 'package:flutter_node_auth/screens/home_screen.dart';
-import 'package:flutter_node_auth/screens/signup_screen.dart';
+import 'package:flutter_node_auth/screens/Home/home_screen.dart';
+import 'package:flutter_node_auth/screens/auth/signup_screen.dart';
+import 'package:flutter_node_auth/screens/intro/page/intro.dart';
 import 'package:flutter_node_auth/services/auth_services.dart';
 import 'package:provider/provider.dart';
 
@@ -29,6 +30,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    
     authService.getUserData(context);
   }
 
@@ -39,7 +41,8 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: Provider.of<UserProvider>(context).user.token.isEmpty ? const SignupScreen() : const HomeScreen(),
+      debugShowCheckedModeBanner: false,
+      home: Provider.of<UserProvider>(context).user.token.isEmpty ? const IntroPage() : const IntroPage(),
     );
   }
 }
