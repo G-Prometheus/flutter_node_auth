@@ -21,7 +21,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> fetchHistoryData() async {
-    const String url = "http://192.168.1.3:3000/api/history";
+    const String url = "http://192.168.1.9:3000/api/history";
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
@@ -52,7 +52,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> deleteHistoryItem(String id) async {
-    final String url = "http://192.168.1.3:3000/api/history/$id";
+    final String url = "http://192.168.1.9:3000/api/history/$id";
     try {
       final response = await http.delete(Uri.parse(url));
       if (response.statusCode == 200) {

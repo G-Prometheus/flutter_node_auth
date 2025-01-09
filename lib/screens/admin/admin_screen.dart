@@ -17,7 +17,7 @@ class _AdminScreenState extends State<AdminScreen> {
   void initState() {
     super.initState();
     // Kết nối WebSocket tới server
-    channel = IOWebSocketChannel.connect('ws://192.168.1.3:3000/echo');
+    channel = IOWebSocketChannel.connect('ws://192.168.1.9:3000/echo');
     channel.stream.listen((data) {
       if (mounted) { // Kiểm tra xem widget còn trong cây hay không
         setState(() {

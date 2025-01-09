@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Device Monitor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    img {
+      margin-top: 20px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Device Monitor</h1>
+  <h2 id="doorStatus">Door Status: Waiting for data...</h2>
+  <img id="deviceImage" alt="Device Image" width="400">
+
+  <script>
+    // Kết nối WebSocket đến server
+    const socket = new WebSocket('ws://localhost:8885'); // Điều chỉnh URL và cổng nếu cần
+
+    // Lắng nghe tin nhắn từ server
+    socket.onmessage = function(event) {
+      const data = JSON.parse(event.data); // Chuyển dữ liệu JSON thành object
+      console.log('Received data:', data); // Log dữ liệu để kiểm tra
+
+      // Cập nhật trạng thái cửa
+      if (data.devices?.device1?.sensors?.door) {
+        document.getElementById("doorStatus").textContent =
+          "Door Status: " + data.devices.device1.sensors.door;
+      }
+
+      // Cập nhật ảnh từ dữ liệu base64
+      if (data.image) {
+        document.getElementById("deviceImage").src =
+          "data:image/jpeg;base64," + data.image;
+      }
+    };
+
+    // Khi kết nối WebSocket mở
+    socket.onopen = function() {
+      console.log("WebSocket connection established.");
+    };
+
+    // Khi có lỗi WebSocket
+    socket.onerror = function(error) {
+      console.error("WebSocket error:", error);
+    };
+
+    // Khi kết nối WebSocket đóng
+    socket.onclose = function() {
+      console.log("WebSocket connection closed.");
+      document.getElementById("doorStatus").textContent = 
+        "Door Status: Connection closed";
+    };
+  </script>
+</body>
+</html>
