@@ -4,7 +4,12 @@ const { engine } = require("express-handlebars");
 const mongoose = require("mongoose");
 const WebSocket = require("ws");
 const expressWs = require("express-ws");
-
+const { Canvas, Image, loadImage } = require("canvas");
+const faceapi = require("face-api.js");
+const fs = require("fs");
+const path = require("path");
+// Monkey patch môi trường để sử dụng face-api.js trong Node.js
+faceapi.env.monkeyPatch({ Canvas, Image });
 // IMPORTS FROM OTHER FILES
 const authRouter = require("./routes/auth");
 const Data = require("./models/data");
@@ -22,7 +27,50 @@ expressWs(app);
 app.use(express.json()); // Middleware xử lý JSON
 app.use(authRouter); // Middleware router xác thực
 app.use(uploadRouter);
+// Hàm load và xử lý dữ liệu huấn luyện
+async function loadTrainingData() {
+  const labels = ["DoMinhQuan", "DoNhatLinh", "NguyenThanhMinh", "Trieu Le Dinh"];
+  const faceDescriptors = [];
 
+  for (const label of labels) {
+    const descriptors = [];
+    for (let i = 1; i <= 4; i++) {
+      const imagePath = path.resolve(__dirname, 'data', label, `${i}.jpeg`);
+      const image = await loadImage(imagePath); // Sử dụng loadImage thay vì bufferToImage
+      const detection = await faceapi.detectSingleFace(image).withFaceLandmarks().withFaceDescriptor();
+
+      if (detection) {
+        descriptors.push(detection.descriptor);
+      }
+    }
+    faceDescriptors.push(new faceapi.LabeledFaceDescriptors(label, descriptors));
+    console.log('Training xong data của ${label}!');
+  }
+  return faceDescriptors;
+}
+
+// Hàm lưu dữ liệu huấn luyện vào file JSON
+async function saveTrainingData() {
+  try {
+    console.log("Loading face-api models...");
+    await Promise.all([
+      faceapi.nets.ssdMobilenetv1.loadFromDisk("uploads/models"),
+      faceapi.nets.faceLandmark68Net.loadFromDisk("uploads/models"),
+      faceapi.nets.faceRecognitionNet.loadFromDisk("uploads/models"),
+    ]);
+
+    console.log("Models loaded successfully.");
+    const trainingData = await loadTrainingData();
+    const filePath = path.resolve(__dirname, "trainingData.json");
+    fs.writeFileSync(filePath, JSON.stringify(trainingData, null, 2), "utf-8");
+    console.log('Training data đã được lưu tại ${filePath}');
+  } catch (error) {
+    console.error("Lỗi khi lưu training data:", error);
+  }
+}
+
+// Lưu dữ liệu huấn luyện khi khởi động server
+saveTrainingData();
 // HANDLEBARS CONFIGURATION
 app.engine(".hbs", engine({ extname: ".hbs" }));
 app.set("view engine", ".hbs");
