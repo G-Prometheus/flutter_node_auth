@@ -5,27 +5,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Form and Device Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.js"
+        integrity="sha256-JOJ7NmVm2chxYZ1KPcAYd2bwVK7NaFj9QKMp7DClews=" crossorigin="anonymous"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        h1, h2 {
+            font-family: 'Roboto', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
             color: #333;
+            line-height: 1.6;
         }
+
+        h1, h2 {
+            text-align: center;
+            margin: 20px 0;
+            color: #4CAF50;
+        }
+
         .container {
-            margin-bottom: 40px;
+            max-width: 800px;
+            margin: 20px auto;
             padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+        }
+
+        .container h2 {
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-container label {
+            font-weight: bold;
+            display: block;
+            margin: 10px 0 5px;
+        }
+
+        .form-container input, .form-container select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
             border: 1px solid #ccc;
             border-radius: 8px;
+            box-sizing: border-box;
         }
-        .container img {
-            margin-top: 20px;
-            border: 2px solid #ccc;
+
+        .form-container button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
             border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
         }
-        .form-container {
-            margin-bottom: 40px;
+
+        .form-container button:hover {
+            background-color: #45a049;
+        }
+
+        .monitor-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .monitor-container canvas {
+            display: block;
+            margin: 20px auto;
+            border-radius: 12px;
+            border: 2px solid #ddd;
+        }
+
+        #doorStatus {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            background-color: #333;
+            color: #fff;
+            margin-top: 40px;
+            font-size: 14px;
+        }
+
+        footer a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -35,37 +111,37 @@
 
     <!-- Form Gửi Thông Tin Nhân Viên -->
     <div class="container form-container">
-        <h2>Upload Form</h2>
+        <h2>Upload Employee Information</h2>
         <form id="uploadForm" action="http://localhost:3000/upload" method="POST" enctype="multipart/form-data">
             <label for="name">Name:</label>
-            <input type="text" id="name" name="name" required><br><br>
+            <input type="text" id="name" name="name" required>
 
             <label for="email">Email:</label>
-            <input type="email" id="email" name="email" required><br><br>
+            <input type="email" id="email" name="email" required>
 
             <label for="gender">Gender:</label>
             <select id="gender" name="gender" required>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
-            </select><br><br>
+            </select>
 
             <label for="position">Position:</label>
-            <input type="text" id="position" name="position" required><br><br>
+            <input type="text" id="position" name="position" required>
 
             <label for="office">Office:</label>
-            <input type="text" id="office" name="office" required><br><br>
+            <input type="text" id="office" name="office" required>
 
             <label for="image1">Image 1:</label>
-            <input type="file" id="image1" name="image" accept="image/*" required><br><br>
+            <input type="file" id="image1" name="image" accept="image/*" required>
 
             <label for="image2">Image 2:</label>
-            <input type="file" id="image2" name="image" accept="image/*"><br><br>
+            <input type="file" id="image2" name="image" accept="image/*">
 
             <label for="image3">Image 3:</label>
-            <input type="file" id="image3" name="image" accept="image/*"><br><br>
+            <input type="file" id="image3" name="image" accept="image/*">
 
             <label for="image4">Image 4:</label>
-            <input type="file" id="image4" name="image" accept="image/*"><br><br>
+            <input type="file" id="image4" name="image" accept="image/*">
 
             <button type="submit">Submit</button>
         </form>
@@ -73,18 +149,112 @@
 
     <!-- Hiển Thị Trạng Thái Cửa và Ảnh -->
     <div class="container monitor-container">
-        <h2 id="doorStatus">Door Status: Waiting for data...</h2>
-        <img id="deviceImage" alt="Device Image" width="400">
+        <h2>Device Monitor</h2>
+        <p id="doorStatus">Door Status: Waiting for data...</p>
+        <canvas id="cameraFrame" width="400" height="300"></canvas>
     </div>
 
+    <footer>
+        &copy; 2025 Your Company. Built with ❤️ by <a href="#">Your Name</a>.
+    </footer>
+
     <script>
+        let trainingData = []; // Mảng chứa các đặc trưng khuôn mặt đã được huấn luyện
+
+        // Tải dữ liệu huấn luyện từ file JSON
+        fetch('http://127.0.0.1:5501/server/trainingData.json')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Dữ liệu huấn luyện:', data);
+
+                // Kiểm tra nếu descriptors có tồn tại và hợp lệ
+                if (data && Array.isArray(data) && data.length > 0 && data[0].descriptors) {
+                    const labeledDescriptors = data.map(person => {
+                        return new faceapi.LabeledFaceDescriptors(
+                            person.label,
+                            person.descriptors.map(descriptor => new Float32Array(descriptor))
+                        );
+                    });
+
+                    console.log("Dữ liệu huấn luyện đã được nạp thành công.");
+                    trainingData = labeledDescriptors; // Lưu trữ dữ liệu huấn luyện vào mảng
+                } else {
+                    console.error('Dữ liệu huấn luyện không hợp lệ!');
+                }
+            })
+            .catch(error => {
+                console.error("Lỗi khi tải dữ liệu huấn luyện:", error);
+            });
+
+        // Khởi tạo các mô hình nhận dạng khuôn mặt
+        async function loadModels() {
+            await faceapi.nets.ssdMobilenetv1.loadFromUri('http://127.0.0.1:5501/server/uploads/models/');
+            await faceapi.nets.faceLandmark68Net.loadFromUri('http://127.0.0.1:5501/server/uploads/models/');
+            await faceapi.nets.faceRecognitionNet.loadFromUri('http://127.0.0.1:5501/server/uploads/models/');
+        }
+
+        // Chuyển đổi dữ liệu base64 thành ảnh
+        function loadImage(base64Data) {
+            const image = new Image();
+            image.src = 'data:image/jpeg;base64,' + base64Data;
+            return new Promise((resolve) => {
+                image.onload = () => resolve(image);
+            });
+        }
+
+        async function recognizeFace(imageData) {
+            if (!faceapi.nets.ssdMobilenetv1.params) {
+                await loadModels(); // Load models if not already loaded
+            }
+
+            const image = await loadImage(imageData);
+            const detections = await faceapi.detectAllFaces(image).withFaceLandmarks().withFaceDescriptors();
+
+            // Kiểm tra trainingData
+            if (!Array.isArray(trainingData) || trainingData.length === 0 || !trainingData[0].descriptors) {
+                console.error('Dữ liệu huấn luyện bị thiếu hoặc không hợp lệ!');
+                return;
+            }
+
+            const faceMatcher = new faceapi.FaceMatcher(trainingData, 0.6);
+            const results = detections.map(d => faceMatcher.findBestMatch(d.descriptor));
+
+            // Tạo canvas và vẽ ảnh
+            const canvas = document.getElementById("cameraFrame");
+            const context = canvas.getContext('2d');
+            canvas.width = image.width;
+            canvas.height = image.height;
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+            // Resize và vẽ kết quả
+            const resizedDetections = faceapi.resizeResults(detections, image);
+            //faceapi.draw.drawDetections(canvas, resizedDetections);
+
+            // Vẽ label trên từng khuôn mặt
+            results.forEach((result, i) => {
+                const box = resizedDetections[i]?.detection.box;
+                if (box) {
+                    const { x, y, width, height } = box;
+                    const label = result.toString();
+                    context.strokeStyle = "#00FF00";
+                    context.lineWidth = 2;
+                    context.strokeRect(x, y, width, height);
+                    context.font = "16px Arial";
+                    context.fillStyle = "#00FF00";
+                    context.fillText(label, x, y - 10); // Hiển thị tên bên trên khuôn mặt
+                }
+            });
+        }
+
+
         // Kết nối WebSocket đến server
-        const socket = new WebSocket('ws://localhost:8885'); // Điều chỉnh URL và cổng nếu cần
+        const socket = new WebSocket('ws://localhost:8885');
 
         // Lắng nghe tin nhắn từ server
-        socket.onmessage = function (event) {
-            const data = JSON.parse(event.data); // Chuyển dữ liệu JSON thành object
-            console.log('Received data:', data); // Log dữ liệu để kiểm tra
+        socket.onmessage = async function (event) {
+            const data = JSON.parse(event.data);
+            console.log('Received data:', data);
 
             // Cập nhật trạng thái cửa
             if (data.devices?.device1?.sensors?.door) {
@@ -92,10 +262,9 @@
                     "Door Status: " + data.devices.device1.sensors.door;
             }
 
-            // Cập nhật ảnh từ dữ liệu base64
+            // Cập nhật ảnh và nhận diện khuôn mặt
             if (data.image) {
-                document.getElementById("deviceImage").src =
-                    "data:image/jpeg;base64," + data.image;
+                await recognizeFace(data.image);
             }
         };
 
@@ -115,6 +284,9 @@
             document.getElementById("doorStatus").textContent =
                 "Door Status: Connection closed";
         };
+
+        // Tải các mô hình nhận dạng khi trang được tải
+        loadModels();
     </script>
 </body>
 

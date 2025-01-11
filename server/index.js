@@ -52,7 +52,7 @@ Object.entries(connections).forEach(([key, settings]) => {
     connectedClients.push(ws);
 
     ws.on("message", (data) => {
-      console.log(`Message from ${key}:`, data);
+      //console.log(`Message from ${key}:`, data);
     
       if (ws.readyState !== ws.OPEN) return;
     
