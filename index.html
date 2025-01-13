@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Device Data Display</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .device {
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .device-title {
+      font-weight: bold;
+    }
+    .image-container img {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Device Data Dashboard</h1>
+  <div id="device-data"></div>
+
+  <script>
+    const connections = [
+      { name: "device1", port: 8885 },
+      { name: "device2", port: 8886 },
+    ];
+
+    const deviceDataContainer = document.getElementById("device-data");
+
+    connections.forEach(({ name, port }) => {
+      const ws = new WebSocket(`ws://localhost:${port}`);
+      const deviceDiv = document.createElement("div");
+      deviceDiv.classList.add("device");
+      deviceDiv.innerHTML = `
+        <div class="device-title">${name}</div>
+        <div class="sensor-data">
+          <strong>Sensor Data:</strong>
+          <pre id="${name}-sensors">Connecting...</pre>
+        </div>
+        <div class="image-container">
+          <strong>Image:</strong>
+          <img id="${name}-image" alt="No image received yet" />
+        </div>
+      `;
+      deviceDataContainer.appendChild(deviceDiv);
+
+      ws.onopen = () => {
+        console.log(`${name} WebSocket connection opened`);
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        // Update sensor data
+        const sensorDataElement = document.getElementById(`${name}-sensors`);
+        sensorDataElement.textContent = JSON.stringify(data.devices[name].sensors, null, 2);
+
+        // Update image if available
+        const imageElement = document.getElementById(`${name}-image`);
+        if (data.image) {
+          imageElement.src = `data:image/png;base64,${data.image}`;
+        }
+      };
+
+      ws.onclose = () => {
+        console.log(`${name} WebSocket connection closed`);
+        const sensorDataElement = document.getElementById(`${name}-sensors`);
+        sensorDataElement.textContent = "Disconnected";
+      };
+    });
+  </script>
+</body>
+</html>
